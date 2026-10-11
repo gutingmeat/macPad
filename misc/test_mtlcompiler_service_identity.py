@@ -1,6 +1,7 @@
 """Lock the MTLCompilerService adapter to RE-verified executable identities."""
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -48,6 +49,22 @@ class MTLCompilerServiceIdentity(unittest.TestCase):
         self.assertIn("if (!profile)", self.adapter)
         self.assertIn("MTLCompilerService UUID mismatch", self.adapter)
         self.assertIn("return;", self.adapter)
+
+    def test_ios1711_profile_matches_independent_device_witnesses(self):
+        # These values were independently read from the 21B91 executable on
+        # iPad13,4; in particular +0x21a8 is an unrelated vtable +0x20 call.
+        profile = self.adapter.split(
+            "0x0c, 0x38, 0x4b, 0xba, 0xf1, 0x55, 0x31, 0x04,", 1
+        )[1].split("    };", 1)[0]
+        self.assertIn("0x8e, 0x77, 0xef, 0xf2, 0x27, 0xa7, 0xf4, 0x13,", profile)
+        calls = re.findall(r"\{(0x[0-9a-f]+), (0x[0-9a-f]+)\}", profile)
+        self.assertEqual(
+            [(int(offset, 16), int(word, 16)) for offset, word in calls],
+            [(0x1e38, 0xd63f093f), (0x236c, 0xd63f091f), (0x23a4, 0xd63f091f)],
+        )
+        self.assertIn(".replyOffset = 0x24ec", profile)
+        self.assertIn(".expectedReplyCall = 0x94000511", profile)
+        self.assertNotIn("0x21a8", profile)
 
     def test_each_allowlisted_build_still_requires_instruction_validation(self):
         for offset in ("0x20e8", "0x25f0", "0x2628"):

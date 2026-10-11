@@ -1036,6 +1036,7 @@ static void InstallMacOSMetalTargetAdapter(void) {
     //   iOS 16.3.1 (20D67)  UUID 6D2CFE56-8D88-39AA-BC25-7FFE5058ED4E
     //   iOS 16.0   (20A8372) UUID B4745394-88D0-3739-9E17-4DE2FB12B00E
     //   iOS 16.5.1 (20F75)  UUID B5CBF457-B300-3FD0-A646-1261DA6E86B0
+    //   iOS 17.1.1 (21B91)  UUID 0C384BBA-F155-3104-8E77-EFF227A7F413
     //
     // The 20A8372 executable has SHA-256
     // 2f980bfb46e3d97c5a330f54c158b41de21793ec113f3d33891e3599e75faba5;
@@ -1047,6 +1048,13 @@ static void InstallMacOSMetalTargetAdapter(void) {
     // +0x2050/+0x2558/+0x2590, and +0x26d8 is `bl _xpc_data_create` with
     // encoding 0x940004ae. Do not combine its UUID with the older offsets:
     // doing so would pass identity but fail the instruction invariant.
+    // The 21B91 executable was inspected on iPad13,4 without exporting Apple
+    // binaries. Its SHA-256 is
+    // b584c2e5b1e80762db5ced927afde1562635a855c52a6f3fc8e48cee20b95f2c.
+    // RE-confirmed: the same six-argument vtable +0x18 build calls are at
+    // +0x1e38/+0x236c/+0x23a4. Its diagnostic xpc_data_create call is at
+    // +0x24ec (0x94000511). This identity profile does not establish complete
+    // iPadOS 17 compatibility; guest/runtime and GPU acceptance remain pending.
     //
     // Keep offsets and expected instructions in the same exact UUID profile
     // so an unexamined service build always retains stock behavior.
@@ -1099,6 +1107,19 @@ static void InstallMacOSMetalTargetAdapter(void) {
             },
             .replyOffset = 0x26d8,
             .expectedReplyCall = 0x940004ae,
+        },
+        {
+            .uuid = {
+                0x0c, 0x38, 0x4b, 0xba, 0xf1, 0x55, 0x31, 0x04,
+                0x8e, 0x77, 0xef, 0xf2, 0x27, 0xa7, 0xf4, 0x13,
+            },
+            .callSites = {
+                {0x1e38, 0xd63f093f},
+                {0x236c, 0xd63f091f},
+                {0x23a4, 0xd63f091f},
+            },
+            .replyOffset = 0x24ec,
+            .expectedReplyCall = 0x94000511,
         },
     };
     const struct mach_header_64 *mh = NULL;

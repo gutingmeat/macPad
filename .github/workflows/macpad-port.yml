@@ -1,0 +1,50 @@
+name: macPad port build artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [port/ipad13-4-ios1711]
+    paths:
+      - .github/workflows/macpad-port.yml
+      - misc/build_port_artifacts.sh
+
+permissions:
+  contents: read
+
+jobs:
+  apple-build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Prepare pinned Theos and SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew install make ldid
+          build_theos="$RUNNER_TEMP/macpad-theos"
+          git clone --no-checkout https://github.com/theos/theos.git "$build_theos"
+          git -C "$build_theos" checkout 304e0799973e8145f32e4ca2de6c747a84b758ce
+          git -C "$build_theos" submodule update --init --recursive
+          build_sdks="$RUNNER_TEMP/macpad-sdks"
+          git clone --filter=blob:none --no-checkout https://github.com/theos/sdks.git "$build_sdks"
+          git -C "$build_sdks" sparse-checkout set iPhoneOS16.5.sdk
+          git -C "$build_sdks" checkout 0222fd5413cf4b9af096f37b4621afa2688572f7
+          mkdir -p "$build_theos/sdks"
+          ln -s "$build_sdks/iPhoneOS16.5.sdk" "$build_theos/sdks/iPhoneOS16.5.sdk"
+          mac_sdk=$(xcrun --sdk macosx --show-sdk-path)
+          mac_version=$(xcrun --sdk macosx --show-sdk-version)
+          ln -s "$mac_sdk" "$build_theos/sdks/MacOSX${mac_version}.sdk"
+          printf 'THEOS=%s\n' "$build_theos" >> "$GITHUB_ENV"
+          printf 'SDKVERSION=16.5\n' >> "$GITHUB_ENV"
+      - name: Build and validate Apple-linked artifacts
+        shell: bash
+        run: bash misc/build_port_artifacts.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macpad-apple-build-${{ github.sha }}
+          path: port-artifacts/
+          if-no-files-found: error
+          retention-days: 7
