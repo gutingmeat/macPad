@@ -16,9 +16,23 @@
 #include "../include/macws_metal_image_filter_request.h"
 #include "../include/macws_code_pointer.h"
 
-// The rootless iOS 16 Theos SDK used by this project omits xpc/xpc.h.  This
-// is the exact public C ABI needed by the UUID-locked reply observer.
+// Use the SDK declaration when available. The older Theos SDK omits XPC;
+// its fallback preserves the same +1 opaque return ABI used by the observer.
+#if __has_include(<xpc/xpc.h>)
+#include <xpc/xpc.h>
+#else
 extern void *xpc_data_create(const void *bytes, size_t length);
+#endif
+
+static void *MacWSCreateCompilerReplyData(const void *bytes, size_t length) {
+#if __has_include(<xpc/xpc.h>) && OS_OBJECT_USE_OBJC
+    // The observer's raw return must retain the create API's +1 ownership.
+    // A non-owning bridge would let ARC release it before the caller receives it.
+    return (__bridge_retained void *)xpc_data_create(bytes, length);
+#else
+    return xpc_data_create(bytes, length);
+#endif
+}
 
 // Diagnostics are explicitly opt-in for the current boot.  They must never
 // survive as configuration under a persistent mobile or rootless directory.
@@ -764,7 +778,7 @@ static void DumpRawCompilerRequest(uint32_t sequence, uintptr_t discriminator,
 // records the returned container verbatim, then calls the real XPC API. No
 // result bytes or status are changed.
 static void *MacWSCompilerReplyDataCreate(const void *bytes, size_t length) {
-    if (!MacWSCompilerDiagnosticsEnabled()) return xpc_data_create(bytes, length);
+    if (!MacWSCompilerDiagnosticsEnabled()) return MacWSCreateCompilerReplyData(bytes, length);
     static _Atomic uint32_t replySequence = 0;
     uint32_t sequence = atomic_fetch_add(&replySequence, 1) + 1;
     uint64_t hash = MacWSFNV1a64(bytes, length);
@@ -809,7 +823,7 @@ static void *MacWSCompilerReplyDataCreate(const void *bytes, size_t length) {
                         sequence, path, errno);
         }
     }
-    return xpc_data_create(bytes, length);
+    return MacWSCreateCompilerReplyData(bytes, length);
 }
 
 static uintptr_t MacWSMTLCodeGenServiceBuildRequest(
