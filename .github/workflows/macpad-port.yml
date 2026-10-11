@@ -48,3 +48,21 @@ jobs:
           path: port-artifacts/
           if-no-files-found: error
           retention-days: 7
+      - name: Build complete rootless package
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew install dpkg
+          env -u SDKVERSION gmake FINALPACKAGE=1 STRIP=0 OPTFLAG=-O2 \
+            THEOS_PACKAGE_SCHEME=rootless GO_EASY_ON_ME=1 \
+            MACWS_WINDOWING_CROSS_PREBUILT="$GITHUB_WORKSPACE/port-artifacts/MacWSWindowing.dylib" package
+          python3 misc/macws_artifact_contract.py verify-package \
+            --root "$GITHUB_WORKSPACE" --binary port-artifacts/MacWSWindowing.dylib \
+            --manifest port-artifacts/MacWSWindowing.build.json \
+            --staging .theos/_ --package "$(ls -t packages/*.deb | head -1)"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macpad-rootless-package-${{ github.sha }}
+          path: packages/*.deb
+          if-no-files-found: error
+          retention-days: 7
