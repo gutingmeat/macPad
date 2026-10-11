@@ -10,7 +10,7 @@ python3 misc/macws_artifact_contract.py snapshot --root "$work" --manifest "$out
 gmake -C MacWSWindowing clean all FINALPACKAGE=1 STRIP=0 OPTFLAG=-O2 \
     THEOS_PACKAGE_SCHEME=rootless GO_EASY_ON_ME=1
 built=MacWSWindowing/.theos/obj/MacWSWindowing.dylib
-[[ -s "$built" ]]
+[[ -f "$built" && -s "$built" ]]
 dyld_info -arch arm64e -fixups "$built" > "$out/Windowing-fixups.txt"
 auth=$(awk '$2 == "__cfstring" && $4 == "auth-bind" && /key=DA/ {n++} END {print n+0}' "$out/Windowing-fixups.txt")
 plain=$(awk '$2 == "__cfstring" && $4 == "bind" {n++} END {print n+0}' "$out/Windowing-fixups.txt")
@@ -25,9 +25,10 @@ python3 misc/macws_artifact_contract.py create --root "$work" \
 shasum -a 256 "$out/MacWSWindowing.dylib" > "$out/MacWSWindowing.sha256"
 mac_version=$(xcrun --sdk macosx --show-sdk-version)
 gmake -C launchservicesd clean all FINALPACKAGE=1 STRIP=0 \
-    TARGET="macosx:clang:${mac_version}:13.0" SDKVERSION="$mac_version" GO_EASY_ON_ME=1
-guest=launchservicesd/.theos/obj/launchservicesd
-[[ -s "$guest" ]]
+    TARGET="macosx:clang:${mac_version}:13.0" SDKVERSION="$mac_version" \
+    THEOS_OBJ_DIR_NAME=obj/port GO_EASY_ON_ME=1
+guest=launchservicesd/.theos/obj/port/launchservicesd
+[[ -f "$guest" && -s "$guest" ]]
 cp "$guest" "$out/launchservicesd"
 vtool -show-build "$out/launchservicesd" > "$out/launchservicesd-platform.txt"
 grep -q 'platform MACOS' "$out/launchservicesd-platform.txt"
