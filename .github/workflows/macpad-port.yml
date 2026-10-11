@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   push:
     branches: [port/ipad13-4-ios1711]
-    paths:
-      - .github/workflows/macpad-port.yml
-      - misc/build_port_artifacts.sh
 
 permissions:
   contents: read
