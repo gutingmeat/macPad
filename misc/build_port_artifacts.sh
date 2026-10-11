@@ -28,10 +28,10 @@ gmake -C launchservicesd clean all FINALPACKAGE=1 STRIP=0 \
     TARGET="macosx:clang:${mac_version}:13.0" SDKVERSION="$mac_version" GO_EASY_ON_ME=1
 guest=launchservicesd/.theos/obj/launchservicesd
 [[ -s "$guest" ]]
-vtool -show-build "$guest" > "$out/launchservicesd-platform.txt"
-grep -q 'platform MACOS' "$out/launchservicesd-platform.txt"
-lipo -verify_arch arm64 "$guest"
 cp "$guest" "$out/launchservicesd"
+vtool -show-build "$out/launchservicesd" > "$out/launchservicesd-platform.txt"
+grep -q 'platform MACOS' "$out/launchservicesd-platform.txt"
+lipo -verify_arch arm64 "$out/launchservicesd"
 shasum -a 256 "$out/launchservicesd" > "$out/launchservicesd.sha256"
 sw_vers > "$out/build-host.txt"
 xcrun clang --version >> "$out/build-host.txt"
