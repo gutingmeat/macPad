@@ -32,7 +32,7 @@ guest=launchservicesd/.theos/obj/port/launchservicesd
 cp "$guest" "$out/launchservicesd"
 vtool -show-build "$out/launchservicesd" > "$out/launchservicesd-platform.txt"
 grep -q 'platform MACOS' "$out/launchservicesd-platform.txt"
-lipo -verify_arch arm64 "$out/launchservicesd"
+lipo "$out/launchservicesd" -verify_arch arm64
 shasum -a 256 "$out/launchservicesd" > "$out/launchservicesd.sha256"
 sw_vers > "$out/build-host.txt"
 xcrun clang --version >> "$out/build-host.txt"
